@@ -8,7 +8,6 @@ import pandas as pd
 
 filename = "/dbfs/mnt/datalake/info-dengue/datasets/RELATORIO_DTB_BRASIL_MUNICIPIO.xls"
 df = pd.read_excel(filename, skiprows=6, header=0)
-
 df = df[['UF', 'Nome_UF', 'Código Município Completo', 'Nome_Município']]
 
 # COMMAND ----------
