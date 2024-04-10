@@ -5,7 +5,6 @@ import pandas as pd
 import requests
 import json
 from pyspark.sql import SparkSession 
-from multiprocessing import Pool
 
 # COMMAND ----------
 
@@ -90,7 +89,6 @@ url = "https://info.dengue.mat.br/api/alertcity"
 diseases = ["dengue", "zika", "chikungunya"]
 year_start = '2024'
 year_end = str(datetime.now().year)
-n_jobs = 4
 
 collector = Collector(url)
 collector.collect_data(diseases, year_start, year_end)
