@@ -3,15 +3,11 @@ from datetime import datetime
 import time
 import csv
 import os
-import pandas as pd
 
 import requests
 from requests.sessions import Session
 
-from multiprocessing import Pool
-
-from pyspark.sql import SparkSession, functions as F
-from pyspark.sql.types import StructType, StructField, StringType, IntegerType, FloatType
+from pyspark.sql import SparkSession
 
 # COMMAND ----------
 
