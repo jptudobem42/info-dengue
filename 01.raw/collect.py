@@ -92,7 +92,7 @@ class Collector:
             time.sleep(5)
 
     def get_current_week(self):
-        return datetime.now().isocalendar().week
+        return datetime.now().isocalendar().week -1
 
     def collect_data(self, diseases, year_start, year_end):
         municipios = self.get_municipios()
