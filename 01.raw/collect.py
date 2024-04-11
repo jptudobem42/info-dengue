@@ -110,9 +110,3 @@ year_end = datetime.now().year
 
 collector = Collector(url, year_start)
 collector.collect_data(diseases, year_start, year_end)
-
-# COMMAND ----------
-
-# MAGIC %sql
-# MAGIC
-# MAGIC SELECT * FROM metadata_infodengue
