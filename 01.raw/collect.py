@@ -34,8 +34,8 @@ class Collector:
             self.spark.sql(f"CREATE TABLE {self.metadados_table} ({schema}) USING DELTA")
 
     def get_municipios(self):
-        # Consulta os códigos dos municípios
-        query = "SELECT cod_municipio FROM codigos_ibge_municipios"
+        # Consulta os códigos dos municípios de Minas Gerais
+        query = "SELECT * FROM codigos_ibge_municipios WHERE cod_uf = '31'"
         df = self.spark.sql(query)
         return [row.cod_municipio for row in df.collect()]
 
@@ -53,12 +53,16 @@ class Collector:
     def update_metadados(self, cod_municipio, disease, year, week):
         # Atualiza a tabela de metadados
         self.spark.sql(f"""
-            MERGE INTO {self.metadados_table} USING (SELECT '{cod_municipio}' as cod_municipio, '{disease}' as disease) AS new_data
+            MERGE INTO {self.metadados_table} USING (SELECT '{cod_municipio}' as cod_municipio, '{disease}' as disease, {year} as new_year, {week} as new_week) AS new_data
             ON {self.metadados_table}.cod_municipio = new_data.cod_municipio AND {self.metadados_table}.disease = new_data.disease
-            WHEN MATCHED THEN
-                UPDATE SET ano_ultima_coleta = {year}, semana_ultima_coleta = {week}, data_ultima_coleta = current_timestamp()
+            WHEN MATCHED AND (metadata_infodengue.ano_ultima_coleta != new_data.new_year OR metadata_infodengue.semana_ultima_coleta != new_data.new_week) THEN
+                UPDATE SET 
+                    ano_ultima_coleta = new_data.new_year, 
+                    semana_ultima_coleta = new_data.new_week, 
+                    data_ultima_coleta = current_timestamp()
             WHEN NOT MATCHED THEN
-                INSERT (cod_municipio, disease, ano_ultima_coleta, semana_ultima_coleta, data_ultima_coleta) VALUES (new_data.cod_municipio, new_data.disease, {year}, {week}, current_timestamp())
+                INSERT (cod_municipio, disease, ano_ultima_coleta, semana_ultima_coleta, data_ultima_coleta) 
+                VALUES (new_data.cod_municipio, new_data.disease, new_data.new_year, new_data.new_week, current_timestamp())
         """)
 
     def get_last_collected_week(self, cod_municipio, disease):
@@ -125,7 +129,7 @@ class Collector:
 
 url = "https://info.dengue.mat.br/api/alertcity"
 diseases = ["dengue", "zika", "chikungunya"]
-year_start = datetime.now().year -4
+year_start = datetime.now().year -4 # Coleta histórico de 5 anos
 year_end = datetime.now().year
 
 collector = Collector(url, year_start)
