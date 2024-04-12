@@ -79,9 +79,24 @@ class Collector:
     def get_current_week(self):
         # Retorna a semana atual
         return datetime.now().isocalendar().week - 1
+    
+    def update_needed(self, disease, cod_municipio, year_start, year_end):
+        # Verifica se há dados novos a serem coletados
+        last_collected_week, last_collected_year = self.get_last_collected_week(cod_municipio, disease)
+        current_year = datetime.now().year
+        current_week = self.get_current_week()
+
+        if last_collected_year == current_year and last_collected_week >= current_week:
+            print(f"Nenhum dado novo para coletar para {disease} no município {cod_municipio} em {current_year}.")
+            return False
+        else:
+            return True
 
     def get_and_save(self, disease, cod_municipio, year_start, year_end):
-        # Processa e salva os dados coletados
+        # Processa e salva os dados coletados se necessário
+        if not self.update_needed(disease, cod_municipio, year_start, year_end):
+            return
+
         last_collected_week, last_collected_year = self.get_last_collected_week(cod_municipio, disease)
         current_year = datetime.now().year
         current_week = self.get_current_week()
@@ -89,10 +104,6 @@ class Collector:
         for year in range(max(year_start, last_collected_year), year_end + 1):
             ew_start = last_collected_week + 1 if year == last_collected_year and last_collected_week < current_week else 1
             ew_end = current_week if year == current_year else 53
-
-            if year == current_year and last_collected_week >= current_week:
-                print(f"Nenhum dado novo para coletar para {disease} no município {cod_municipio} em {year}.")
-                continue
 
             params = {
                 "geocode": cod_municipio,
@@ -108,7 +119,7 @@ class Collector:
                 response = self.session.get(self.url, params=params)
                 if response.status_code == 200:
                     data = response.text
-                    self.save_csv(data, disease, cod_municipio, year)  # Salva como CSV
+                    self.save_csv(data, disease, cod_municipio, year)
                     self.update_metadados(cod_municipio, disease, year, ew_end)
                     print(f"Coleta concluída para {disease} no município {cod_municipio} em {year} até a semana {ew_end}.")
                 else:
