@@ -80,7 +80,7 @@ class Collector:
         # Retorna a semana atual
         return datetime.now().isocalendar().week - 1
     
-    def update_needed(self, disease, cod_municipio, year_start, year_end):
+    def update_needed(self, disease, cod_municipio):
         # Verifica se há dados novos a serem coletados
         last_collected_week, last_collected_year = self.get_last_collected_week(cod_municipio, disease)
         current_year = datetime.now().year
@@ -94,7 +94,7 @@ class Collector:
 
     def get_and_save(self, disease, cod_municipio, year_start, year_end):
         # Processa e salva os dados coletados se necessário
-        if not self.update_needed(disease, cod_municipio, year_start, year_end):
+        if not self.update_needed(disease, cod_municipio):
             return
 
         last_collected_week, last_collected_year = self.get_last_collected_week(cod_municipio, disease)
