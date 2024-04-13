@@ -112,7 +112,7 @@ class BronzeIngestor:
                 "main.id = updates.id"
             ).whenMatchedUpdateAll().whenNotMatchedInsertAll().execute()
 
-    def run(self, diseases)
+    def run(self, diseases):
         # Executa o processo de ingestão para cada doença
         for disease in diseases:
             df_raw = self.get_data(disease)
