@@ -56,4 +56,4 @@ df_municipios.display()
 
 # Escreve o DataFrame Spark em uma tabela Delta
 
-df_municipios.write.format("delta").mode("overwrite").saveAsTable("codigos_ibge_municipios")
+df_municipios.write.format("delta").mode("overwrite").saveAsTable("gold.ibge.codigos_municipios")
