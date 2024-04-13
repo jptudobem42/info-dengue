@@ -18,7 +18,7 @@ class Collector:
         self.session = requests.Session()
         self.url = url
         self.year_start = year_start
-        self.metadados_table = "metadata_infodengue"
+        self.metadados_table = "bronze.infodengue.metadata_infodengue"
         self.create_metadados_table()
 
     def create_metadados_table(self):
@@ -35,7 +35,8 @@ class Collector:
 
     def get_municipios(self):
         # Consulta os códigos dos municípios de Minas Gerais
-        query = "SELECT * FROM codigos_ibge_municipios WHERE cod_uf = '31'"
+        db_path = "gold.ibge.codigos_municipios"
+        query = f"SELECT * FROM {db_path} WHERE cod_uf = '31'"
         df = self.spark.sql(query)
         return [row.cod_municipio for row in df.collect()]
 
@@ -135,6 +136,8 @@ class Collector:
             for cod_municipio in municipios:
                 print(f"Iniciando coleta dos dados de {disease} do município {cod_municipio}...")
                 self.get_and_save(disease, cod_municipio, year_start, year_end)
+
+        self.spark.sql(f"VACUUM {self.metadados_table} RETAIN 240 HOURS")
 
 # COMMAND ----------
 
