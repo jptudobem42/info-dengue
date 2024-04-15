@@ -53,7 +53,7 @@ class BronzeIngestor:
     def get_data(self, disease):
         # Identifica os arquivos a serem lidos com base nos metadados para a doença específica
         current_year = datetime.now().year
-        current_week = datetime.now().isocalendar().week - 1
+        current_week = datetime.now().isocalendar().week -1
         
         print(f"Identificando arquivos para {disease} que precisam de atualização...")
 
@@ -62,13 +62,13 @@ class BronzeIngestor:
             FROM {self.metadados_table}
             WHERE disease = '{disease}' AND
                 (ano_ultima_coleta < {current_year} OR 
-                (ano_ultima_coleta = {current_year} AND semana_ultima_coleta < {current_week}))
+                (ano_ultima_coleta = {current_year} AND semana_ultima_coleta = {current_week}))
         """)
 
         arquivos_para_ler = [
             f"{self.base_path}/{disease}/{row.cod_municipio}-{row.ano_ultima_coleta}.csv"
             for row in df_metadados.collect()
-            if os.path.exists(f"{self.base_path}/{disease}/{row.cod_municipio}-{row.ano_ultima_coleta}.csv")
+            if len(dbutils.fs.ls(f"{base_path}/{disease}/{row.cod_municipio}-{row.ano_ultima_coleta}.csv")) > 0
         ]
         
         if arquivos_para_ler:
@@ -81,31 +81,35 @@ class BronzeIngestor:
     def filter_updates(self, df, disease):
         # Filtra as atualizações necessárias baseando-se nos metadados
         current_year = datetime.now().year
-        current_week = datetime.now().isocalendar().week - 1
+        current_week = datetime.now().isocalendar().week -1
 
         print(f"Filtrando dados que precisam ser atualizados para {disease}...")
         
         df.createOrReplaceTempView("updates")
         df_updates = self.spark.sql(f"""
-            SELECT u.*
-            FROM updates u
-            LEFT JOIN {self.metadados_table} m
-            ON LEFT(u.id, 7) = m.cod_municipio AND m.disease = '{disease}'
-            WHERE m.ano_ultima_coleta IS NULL OR m.ano_ultima_coleta < {current_year} OR 
-                  (m.ano_ultima_coleta = {current_year} AND m.semana_ultima_coleta < {current_week})
-        """)
+                        SELECT u.*
+                        FROM updates u
+                        LEFT JOIN {self.metadados_table} m
+                        ON LEFT(u.id, 7) = m.cod_municipio AND m.disease = '{disease}'
+                        WHERE (m.ano_ultima_coleta IS NULL AND NOT EXISTS (
+                                SELECT 1 FROM {self.metadados_table} m2
+                                WHERE m2.cod_municipio = LEFT(u.id, 7) AND m2.disease = '{disease}'
+                            )) OR
+                            (m.ano_ultima_coleta < {current_year}) OR
+                            (m.ano_ultima_coleta = {current_year} AND m.semana_ultima_coleta = {current_week})
+                    """)
         return df_updates
 
     def verify_and_merge(self, disease, df_updates):
         # Verifica se a tabela existe e faz o merge dos dados
         disease_table = f"bronze.infodengue.{disease}"
-        table_exist = DeltaTable.isDeltaTable(self.spark, disease_table)
+        table_exist = self.spark.catalog.tableExists(disease_table)
 
         if not table_exist:
             print(f"Criando tabela Delta para {disease}.")
             df_updates.write.format("delta").mode("overwrite").saveAsTable(disease_table)
         else:
-            print(f"Atualizando dados na tabela Delta para {disease}.")
+            print(f"Atualizando dados na tabela {disease_table}.")
             deltaTable = DeltaTable.forName(self.spark, disease_table)
             deltaTable.alias("main").merge(
                 df_updates.alias("updates"),
